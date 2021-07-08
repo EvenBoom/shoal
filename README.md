@@ -1,2 +1,2 @@
 # shoal
-discovery services by etcd.
+Discovery services by etcd.
