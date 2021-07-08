@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/EvenBoom/shoal/slb"
 	"google.golang.org/grpc/connectivity"
-	"my.project.com/root/shoal/slb"
 
 	"go.etcd.io/etcd/api/v3/v3rpc/rpctypes"
 	clientv3 "go.etcd.io/etcd/client/v3"
