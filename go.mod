@@ -1,4 +1,4 @@
-module my.project.com/root/shoal
+module github.com/EvenBoom/shoal
 
 go 1.16
 
