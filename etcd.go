@@ -404,10 +404,7 @@ func (srv *EtcdService) GetSLBAddress(name string) (address string, err error) {
 	defer srv.RUnlock()
 
 	if srv.Status != StatusTypeActive {
-		srv.Logger.Error(ErrServiceNotActive.Error(),
-			zap.String("name", name),
-		)
-		return
+		return srv.getSLBAddressWithoutCache(name)
 	}
 
 	var scoreServers []*slb.ScoreServer
@@ -486,6 +483,11 @@ func (srv *EtcdService) GetSLBAddress(name string) (address string, err error) {
 		return address, nil
 	}
 
+	return srv.getSLBAddressWithoutCache(name)
+}
+
+// getSLBAddressWithoutCache
+func (srv *EtcdService) getSLBAddressWithoutCache(name string) (address string, err error) {
 	timeoutContext, cancel := context.WithTimeout(srv.Context, deadline)
 	defer cancel()
 
@@ -499,7 +501,7 @@ func (srv *EtcdService) GetSLBAddress(name string) (address string, err error) {
 		return "", err
 	}
 
-	scoreServers = make([]*slb.ScoreServer, len(getResp.Kvs))
+	scoreServers := make([]*slb.ScoreServer, len(getResp.Kvs))
 
 	for i, kv := range getResp.Kvs {
 		strs := strings.Split(string(kv.Key), "_")
