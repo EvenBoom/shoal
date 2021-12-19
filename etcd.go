@@ -111,6 +111,21 @@ func NewEtcdService(name string) *EtcdService {
 	return service
 }
 
+// NewEtcdClient create etcd service with client, but this service has no local cache.
+func NewEtcdClient() *EtcdService {
+
+	service := new(EtcdService)
+
+	service.Logger, _ = zap.NewProduction()
+
+	err := service.setDefaultEtcdConfig()
+	if err != nil {
+		service.Logger.Panic(err.Error())
+	}
+
+	return service
+}
+
 // SetConfig set etcd clientv3 config.
 func (srv *EtcdService) SetConfig(config *clientv3.Config) *EtcdService {
 	srv.Config = config
@@ -177,7 +192,7 @@ func (srv *EtcdService) SetLogger(logger *zap.Logger) *EtcdService {
 	return srv
 }
 
-// NewZapLogger new logger
+// NewZapLogger new logger.
 func NewLogger() *zap.Logger {
 
 	logger, _ := zap.NewProduction()
@@ -185,7 +200,7 @@ func NewLogger() *zap.Logger {
 	return logger
 }
 
-// NewZapLoggerConfig new logger config
+// NewZapLoggerConfig new logger config.
 func NewLoggerConfig() zap.Config {
 	return zap.NewProductionConfig()
 }
@@ -232,27 +247,11 @@ func (srv *EtcdService) Register() error {
 
 	// if config is nil, set default config.
 	if srv.Config == nil {
-		// etcd config file bytes.
-		var configBytes []byte
-		// config object of etcd clientv3.
-		var config *clientv3.Config
-
-		configBytes, err := configFile.ReadFile(EtcdConfigPath)
+		err := srv.setDefaultEtcdConfig()
 		if err != nil {
 			srv.Logger.Error(err.Error())
 			return err
 		}
-
-		// set default config from file.
-		config = new(clientv3.Config)
-		err = json.Unmarshal(configBytes, config)
-		if err != nil {
-			srv.Logger.Error(err.Error())
-			return err
-		}
-
-		srv.SetConfig(config).InitClient()
-		srv.Status = StatusTypeActive
 	}
 
 	for {
@@ -273,6 +272,31 @@ func (srv *EtcdService) Register() error {
 		time.After(time.Second)
 	}
 
+}
+
+// setDefaultEtcdConfig set the default etcd config.
+func (srv *EtcdService) setDefaultEtcdConfig() error {
+	// etcd config file bytes.
+	var configBytes []byte
+	// config object of etcd clientv3.
+	var config *clientv3.Config
+
+	configBytes, err := configFile.ReadFile(EtcdConfigPath)
+	if err != nil {
+		return err
+	}
+
+	// set default config from file.
+	config = new(clientv3.Config)
+	err = json.Unmarshal(configBytes, config)
+	if err != nil {
+		return err
+	}
+
+	srv.SetConfig(config).InitClient()
+	srv.Status = StatusTypeActive
+
+	return nil
 }
 
 // keepAlive keep etcd service alive.
@@ -486,7 +510,7 @@ func (srv *EtcdService) GetSLBAddress(name string) (address string, err error) {
 	return srv.getSLBAddressWithoutCache(name)
 }
 
-// getSLBAddressWithoutCache
+// getSLBAddressWithoutCache get slb address without cache.
 func (srv *EtcdService) getSLBAddressWithoutCache(name string) (address string, err error) {
 	timeoutContext, cancel := context.WithTimeout(srv.Context, deadline)
 	defer cancel()
@@ -528,7 +552,7 @@ func (srv *EtcdService) getSLBAddressWithoutCache(name string) (address string, 
 	return address, err
 }
 
-// EtcdWatchHandler handle calls from etcd
+// EtcdWatchHandler handle calls from etcd.
 func (srv *EtcdService) EtcdWatchHandler(name string) {
 	srv.RLock()
 	if srv.Status != StatusTypeActive {
@@ -600,7 +624,7 @@ func (srv *EtcdService) EtcdWatchHandler(name string) {
 	}
 }
 
-// Deregister deregister this server
+// Deregister deregister this server.
 func (srv *EtcdService) Deregister() {
 
 	srv.Logger.Info("register: service deregistering...",
