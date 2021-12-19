@@ -117,7 +117,9 @@ func NewEtcdClient() *EtcdService {
 	service := new(EtcdService)
 
 	service.Logger, _ = zap.NewProduction()
-
+	// init score slb.
+	service.ScoreSLB = slb.NewScoreSLB()
+	// set default etcd config
 	err := service.setDefaultEtcdConfig()
 	if err != nil {
 		service.Logger.Panic(err.Error())
