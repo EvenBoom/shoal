@@ -152,10 +152,41 @@ func (srv *EtcdService) SetConfig(config *clientv3.Config) *EtcdService {
 	return srv
 }
 
-// SetConfig set etcd clientv3 config.
-func (srv *EtcdService) SetAddress(address string) *EtcdService {
-	srv.Address = address
+// SetNetwork set service network.
+func (srv *EtcdService) SetNetwork(network string) *EtcdService {
+
+	// create a listener.
+	lis, err := net.Listen(network, srv.Address)
+	if err != nil {
+		srv.Logger.Panic(err.Error())
+	}
+	// set listener.
+	srv.Listener = lis
+	// set default network.
+	srv.Network = lis.Addr().Network()
+	// set default address.
+	srv.Address = lis.Addr().String()
+
 	return srv
+}
+
+// SetAddress set service address.
+func (srv *EtcdService) SetAddress(address string) *EtcdService {
+
+	// create a listener.
+	lis, err := net.Listen(srv.Network, address)
+	if err != nil {
+		srv.Logger.Panic(err.Error())
+	}
+	// set listener.
+	srv.Listener = lis
+	// set default network.
+	srv.Network = lis.Addr().Network()
+	// set default address.
+	srv.Address = lis.Addr().String()
+
+	return srv
+
 }
 
 // SetEndPoints set end points.
