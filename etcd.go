@@ -115,6 +115,8 @@ func NewEtcdService(name string) *EtcdService {
 func NewEtcdClient() *EtcdService {
 
 	service := new(EtcdService)
+	// init context.
+	service.Context = context.Background()
 
 	service.Logger, _ = zap.NewProduction()
 	// init score slb.
