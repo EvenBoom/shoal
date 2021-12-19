@@ -27,13 +27,14 @@ This file contains functions for etcd system.
 
 // errors.
 var (
-	ErrNoAvailableConfig  = errors.New("register: no available configuration")
-	ErrNoAvailableName    = errors.New("register: no available name")
-	ErrWrongNameFormat    = errors.New("register: wrong name format")
-	ErrNoAvailableNetwork = errors.New("register: no available network")
-	ErrNoAvailableAddress = errors.New("register: no available address")
-	ErrKeepAliveFailed    = errors.New("register: keep alive failed")
-	ErrServiceNotActive   = errors.New("register: service not active")
+	ErrNoAvailableConfig   = errors.New("register: no available configuration")
+	ErrNoAvailableName     = errors.New("register: no available name")
+	ErrWrongNameFormat     = errors.New("register: wrong name format")
+	ErrNoAvailableListener = errors.New("register: no available listener")
+	ErrNoAvailableNetwork  = errors.New("register: no available network")
+	ErrNoAvailableAddress  = errors.New("register: no available address")
+	ErrKeepAliveFailed     = errors.New("register: keep alive failed")
+	ErrServiceNotActive    = errors.New("register: service not active")
 )
 
 // file path.
@@ -102,10 +103,18 @@ func NewEtcdService(name string) *EtcdService {
 	service.Name = strings.ToLower(name)
 	// lease ttl default value 10s.
 	service.LeaseTTL = 10
+
+	// create a listener.
+	lis, err := net.Listen(DefaultNetwork, DefaultAddress)
+	if err != nil {
+		service.Logger.Panic(err.Error())
+	}
+	// set listener.
+	service.Listener = lis
 	// set default network.
-	service.Network = DefaultNetwork
+	service.Network = lis.Addr().Network()
 	// set default address.
-	service.Address = DefaultAddress
+	service.Address = lis.Addr().String()
 	// init score slb.
 	service.ScoreSLB = slb.NewScoreSLB()
 	// local cache default value is true.
@@ -251,6 +260,11 @@ func (srv *EtcdService) Register() error {
 		return ErrWrongNameFormat
 	}
 
+	if srv.Listener == nil {
+		srv.Logger.Error(ErrNoAvailableListener.Error())
+		return ErrNoAvailableListener
+	}
+
 	if srv.Network == "" {
 		srv.Logger.Error(ErrNoAvailableNetwork.Error())
 		return ErrNoAvailableNetwork
@@ -260,14 +274,6 @@ func (srv *EtcdService) Register() error {
 		srv.Logger.Error(ErrNoAvailableAddress.Error())
 		return ErrNoAvailableAddress
 	}
-
-	lis, err := net.Listen(srv.Network, srv.Address)
-	if err != nil {
-		srv.Logger.Error(err.Error())
-		return err
-	}
-
-	srv.Listener = lis
 
 	// if config is nil, set default config.
 	if srv.Config == nil {
