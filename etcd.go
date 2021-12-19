@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
+	"net"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,6 +30,7 @@ var (
 	ErrNoAvailableConfig  = errors.New("register: no available configuration")
 	ErrNoAvailableName    = errors.New("register: no available name")
 	ErrWrongNameFormat    = errors.New("register: wrong name format")
+	ErrNoAvailableNetwork = errors.New("register: no available network")
 	ErrNoAvailableAddress = errors.New("register: no available address")
 	ErrKeepAliveFailed    = errors.New("register: keep alive failed")
 	ErrServiceNotActive   = errors.New("register: service not active")
@@ -51,6 +53,7 @@ const (
 
 // default value.
 var (
+	DefaultNetwork = "tcp"
 	DefaultAddress = "127.0.0.1:"
 )
 
@@ -60,6 +63,7 @@ type EtcdService struct {
 	Config         *clientv3.Config   // config of etcd clientv3.
 	Client         *clientv3.Client   // client etcd clientv3.
 	Name           string             // service name, "_" is keyword, you can't use it.
+	Network        string             // network, example "tcp", "udp".
 	Address        string             // service address.
 	LeaseID        clientv3.LeaseID   // etcd lease id.
 	LeaseTTL       int64              // etcd lease ttl(second) default 10s.
@@ -68,6 +72,7 @@ type EtcdService struct {
 	SLBWatchCancel context.CancelFunc // cancel func of slb.
 	Logger         *zap.Logger        // zap logger.
 	*slb.ScoreSLB                     // score server load balancing.
+	Listener       net.Listener       // net listener.
 	Status         StatusType         // the status of service.
 	sync.RWMutex                      // read-write mutex.
 }
@@ -97,6 +102,8 @@ func NewEtcdService(name string) *EtcdService {
 	service.Name = strings.ToLower(name)
 	// lease ttl default value 10s.
 	service.LeaseTTL = 10
+	// set default network.
+	service.Network = DefaultNetwork
 	// set default address.
 	service.Address = DefaultAddress
 	// init score slb.
@@ -244,10 +251,23 @@ func (srv *EtcdService) Register() error {
 		return ErrWrongNameFormat
 	}
 
+	if srv.Network == "" {
+		srv.Logger.Error(ErrNoAvailableNetwork.Error())
+		return ErrNoAvailableNetwork
+	}
+
 	if srv.Address == "" {
 		srv.Logger.Error(ErrNoAvailableAddress.Error())
 		return ErrNoAvailableAddress
 	}
+
+	lis, err := net.Listen(srv.Network, srv.Address)
+	if err != nil {
+		srv.Logger.Error(err.Error())
+		return err
+	}
+
+	srv.Listener = lis
 
 	// if config is nil, set default config.
 	if srv.Config == nil {
