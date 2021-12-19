@@ -51,7 +51,7 @@ const (
 
 // default value.
 var (
-	DefaultAddress = "127.0.0.1:50051"
+	DefaultAddress = "127.0.0.1:"
 )
 
 // EtcdService micro service base on etcd.
