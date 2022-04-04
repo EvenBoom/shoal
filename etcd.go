@@ -20,8 +20,8 @@ import (
 )
 
 /*
-what is etcd? It is "A distributed, reliable key-value store for the most critical data of a distributed system".
-This is copy from official website.
+What is etcd? It is "A distributed, reliable key-value store for the most critical data of a distributed system",
+this sentense is copying from official website.
 This file contains functions for etcd system.
 */
 
